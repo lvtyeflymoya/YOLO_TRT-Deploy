@@ -1,11 +1,10 @@
-
 #include "../include/yolov11.h"
-
 int main(int argc, char** argv) {
-    // 示例用法
     Logger logger;
-    YOLOv11 detector("D:/Cpp_Project/PanoramicTracking/onnx_tensorRT/models/粗检测/230314-all/rough_waternet.engine", logger);
-    cv::Mat image = cv::imread("D:/ImageAnnotation/chuanzha/VOCdevkit/VOCshipoutside/JPEGImages/00009.jpg");
+    YOLOv11 detector("D:/ExperimentResult/yolo_deploy/yolo11n.engine", logger);
+    cv::Mat image = cv::imread("C:/Users/Zhang/Desktop/Snipaste_2025-05-08_20-29-51.png");
+    cv::imshow("Image", image);
+    cv::waitKey(0);
     
     // 执行推理流程
     detector.preprocess(image);

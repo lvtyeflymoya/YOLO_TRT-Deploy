@@ -4,16 +4,18 @@ project(YOLOv11TRT CXX)
 
 # set C++ standard
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Find CUDA
 find_package(CUDA REQUIRED)
-if (NOT CUDA_FOUND)
-    message(FATAL_ERROR "CUDA not found. Please install CUDA and try again.")
-endif()
+message(STATUS "CUDA Libraries: ${CUDA_LIBRARIES}")
+
 
 # Find OpenCV
-find_Package(OpenCV REQUIRED)
+list(APPEND CMAKE_PREFIX_PATH "D:/apps/Opencv/opencv/build")
+find_package(OpenCV REQUIRED)
 if (NOT OpenCV_FOUND)
     message(FATAL_ERROR "OpenCV not found. Please install OpenCV and try again.")
 endif()
@@ -33,7 +35,7 @@ add_executable(${PROJECT_NAME}
 
 # Include directories
 target_include_directories(${PROJECT_NAME}
-    PUBLIC
+PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${TENSORRT_PATH}/include
@@ -41,17 +43,14 @@ target_include_directories(${PROJECT_NAME}
 
 # Link TensorRT libraries
 set(TENSORRT_LIBS
-    "${TENSORRT_PATH}/lib/nvinfer.lib"
-    "${TENSORRT_PATH}/lib/nvonnxparser.lib"
-    "${TENSORRT_PATH}/lib/nvparsers.lib"
-    "${TENSORRT_PATH}/lib/nvinfer_plugin.lib"
+    "${TENSORRT_PATH}/lib/nvinfer_10.lib"
+    "${TENSORRT_PATH}/lib/nvonnxparser_10.lib"
+    "${TENSORRT_PATH}/lib/nvinfer_plugin_10.lib"
     )
 
 # Link libraries
-target_link_directories(${PROJECT_NAME}
-    PRIVATE
+target_link_libraries(${PROJECT_NAME}
     ${CUDA_LIBRARIES}
-    ${OpenCV_LIBS}
+    ${OpenCV_LIBRARIES}
     ${TENSORRT_LIBS}
     )
-

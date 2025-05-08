@@ -23,9 +23,8 @@ YOLOv11::YOLOv11(const std::string &engine_path, nvinfer1::ILogger& logger) {
     // 反序列化引擎
     this->runtime.reset(nvinfer1::createInferRuntime(logger));
     this->engine.reset(this->runtime->deserializeCudaEngine(trtModelBuffer.get(), size));
-    delete[] trtModelBuffer.get(); 
     this->context.reset(this->engine->createExecutionContext());
-
+    
     // 获取输入输出维度信息
     auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
     this->input_h = input_dims.d[2];
@@ -42,8 +41,13 @@ YOLOv11::YOLOv11(const std::string &engine_path, nvinfer1::ILogger& logger) {
     // 输出缓冲区分配gpu内存
     CUDA_CHECK(cudaMalloc(&gpu_buffers[1], num_detections * detection_attribute_size * sizeof(float)));
 
+    const char* input_name = engine->getIOTensorName(0); // 获取输入张量名称
+    const char* output_name = engine->getIOTensorName(1); // 获取输出张量名称
+    this->context->setTensorAddress(input_name, gpu_buffers[0]); // 绑定输入地址
+    this->context->setTensorAddress(output_name, gpu_buffers[1]); // 绑定输出地址
+
     // 初始化CUDA流
-    CUDA_CHECK(cudaStreamCreate(&stream));\
+    CUDA_CHECK(cudaStreamCreate(&stream));
 
     // 模型预热
     if (warmup) {
@@ -216,23 +220,23 @@ void YOLOv11::draw(cv::Mat &img, std::vector<Object> &objects) {
         // 调整边界框比例
         auto bbox = obj.bbox;
         if (ratio_h < ratio_w) {
-            bbox.x = bbox.x / ratio_w;
-            bbox.y = (bbox.y - (input_h - ratio_w * img.rows) / 2) / ratio_w;
-            bbox.width = bbox.width / ratio_w;
-            bbox.height = bbox.height / ratio_w;
+            bbox.x = static_cast<int>(std::round(bbox.x / ratio_w));
+            bbox.y = static_cast<int>(std::round((bbox.y - (input_h - ratio_w * img.rows) / 2) / ratio_w));
+            bbox.width = static_cast<int>(std::round(bbox.width / ratio_w));
+            bbox.height = static_cast<int>(std::round(bbox.height / ratio_w));
         } 
         else {
-            bbox.x = (bbox.x - (input_w - ratio_h * img.cols) / 2) / ratio_h;
-            bbox.y = bbox.y / ratio_h;
-            bbox.width = bbox.width / ratio_h;
-            bbox.height = bbox.height / ratio_h;
+            bbox.x = static_cast<int>(std::round((bbox.x - (input_w - ratio_h * img.cols) / 2) / ratio_h));
+            bbox.y = static_cast<int>(std::round(bbox.y / ratio_h));
+            bbox.width = static_cast<int>(std::round(bbox.width / ratio_h));
+            bbox.height = static_cast<int>(std::round(bbox.height / ratio_h));
         }
         
         // 绘制边界框
         cv::rectangle(img, bbox, color, 2);
 
         // 绘制类别名称和置信度
-        std::string class_string = CLASS_NAMES[obj.class_id] + ": " + std::to_string(obj.conf);
+        std::string class_string = CLASS_NAMES[obj.class_id] + ": " + std::to_string(obj.conf).substr(0, 4);
         // 获取文本的大小
         cv::Size text_size = cv::getTextSize(class_string, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
         // 定义文本框矩形
@@ -240,7 +244,7 @@ void YOLOv11::draw(cv::Mat &img, std::vector<Object> &objects) {
         // 绘制文本框背景矩形
         cv::rectangle(img, text_rect, color, cv::FILLED);
         // 绘制文本
-        cv::putText(img, class_string, cv::Point(bbox.x + 5, bbox.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
+        cv::putText(img, class_string, cv::Point(bbox.x + 5, bbox.y - 10), cv::FONT_HERSHEY_DUPLEX, 0.5, cv::Scalar(0, 0, 0), 2, 0);
     
     }
 }
